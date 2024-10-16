@@ -54,6 +54,7 @@
 				RPImage.clear_layer(index)
 
 				RPImage.get_cell(layer, x, y)
+				RPImage.get_cell_unpacked(layer, x, y)
 				RPImage.get_char(layer, x, y)
 				RPImage.get_fg(layer, x, y)
 				RPImage.get_bg(layer, x, y)
@@ -214,8 +215,8 @@ end
 --        RPCell
 --
 --    Not used internally. Cells objects are only created when a user calls
---		RPImage.get_cell
 --		RPImage.new_cell
+--		RPImage.get_cell
 
 --=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--
 local _cell_fields = {
@@ -264,7 +265,7 @@ local _read_only = {
 	h=true,
 	layers=true,
 	version=true,
-	transp_mode=true
+	transp_mode=true,
 	chars=true,
 	fgs=true,
 	bgs=true,
@@ -386,8 +387,7 @@ function RPImage:new_cell(char, fg, bg)
 end
 
 
--- get an RPCell object corresponding to the cell
--- at 'x, y' coordinates in 'layer'
+-- Get an `RPCell` object for the cell at coordinates `x` and `y` and in layer 'layer'.
 function RPImage:get_cell(layer, x, y)
 	checktype(layer, 1, "number", 2)
 	checktype(x, 2, "number", 2)
@@ -397,7 +397,7 @@ function RPImage:get_cell(layer, x, y)
 	return self:new_cell(self._chars[layer][i], self._fgs[layer][i], self._bgs[layer][i])
 end
 
--- get the cell components at 'x, y' coordinates in 'layer'
+-- Get the unpacked cell components at coordinates `x` and `y` and in layer 'layer'.
 function RPImage:get_cell_unpacked(layer, x, y)
 	checktype(layer, 1, "number", 2)
 	checktype(x, 2, "number", 2)
@@ -407,7 +407,7 @@ function RPImage:get_cell_unpacked(layer, x, y)
 	return self._chars[layer][i], self._fgs[layer][i], self._bgs[layer][i]
 end
 
--- get the 'char' component of the cell at 'x, y' coordinates in 'layer'
+-- Get the `char` component of the cell at coordinates `x` and `y` and in layer `layer`.
 function RPImage:get_char(layer, x, y)
 	checktype(layer, 1, "number", 2)
 	checktype(x, 2, "number", 2)
@@ -416,7 +416,7 @@ function RPImage:get_char(layer, x, y)
 	return self._chars[layer][x+y*self._w]
 end
 
--- get the 'fg' component of the cell at 'x, y' coordinates in 'layer'
+-- Get the `fg` component of the cell at coordinates `x` and `y` and in layer `layer`.
 function RPImage:get_fg(layer, x, y)
 	checktype(layer, 1, "number", 2)
 	checktype(x, 2, "number", 2)
@@ -426,7 +426,7 @@ function RPImage:get_fg(layer, x, y)
 	return self._fgs[layer][x+y*self._w]
 end
 
--- get the 'bg' component of the cell at 'x, y' coordinates in 'layer'
+-- Get the `bg` component of the cell at coordinates `x` and `y` and in layer `layer`.
 function RPImage:get_bg(layer, x, y)
 	checktype(layer, 1, "number", 2)
 	checktype(x, 2, "number", 2)
@@ -436,8 +436,8 @@ function RPImage:get_bg(layer, x, y)
 	return self._bgs[layer][x+y*self._w]
 end
 
--- set the components of the cell at 'x, y' coordinates in 'layer'
--- (unneeded elements can be passed as nil)
+-- Set the components of the cell at coordinates `x`, `y`, in layer `layer`.
+-- (unneeded components can be passed as nil)
 -- param 'char' : number | RPCell | table as {char, fg, bg}
 -- param 'fg'   : _COLOR_TYPE
 -- param 'bg'   : _COLOR_TYPE
@@ -467,7 +467,7 @@ function RPImage:set_cell(layer, x, y, char, fg, bg)
 	end
 end
 
--- set the 'char' component of the cell at 'x, y' coordinates in 'layer'
+-- set the `char` component of the cell at coordinates `x`, `y`, in layer `layer`.
 -- param 'char' : number | RPCell | table as {char, fg, bg}
 function RPImage:set_char(layer, x, y, char)
 	checktype(layer, 1, "number", 2)
@@ -478,8 +478,7 @@ function RPImage:set_char(layer, x, y, char)
 	self._chars[layer][x+y*self._w] = char
 end
 
--- set the 'fg' component of the cell at 'x, y' coordinates in 'layer'
--- (unneeded elements can be passed as nil)
+-- set the `fg` component of the cell at coordinates `x`, `y`, in layer `layer`.
 -- param 'fg'   : _COLOR_TYPE
 function RPImage:set_fg(layer, x, y, fg)
 	checktype(layer, 1, "number", 2)
@@ -490,8 +489,7 @@ function RPImage:set_fg(layer, x, y, fg)
 	self._fgs[layer][x+y*self._w] = fg
 end
 
--- set the 'bg' component of the cell at 'x, y' coordinates in 'layer'
--- (unneeded elements can be passed as nil)
+-- set the `bg` component of the cell at coordinates `x`, `y`, in layer `layer`.
 -- param 'bg'   : _COLOR_TYPE
 function RPImage:set_bg(layer, x, y, bg)
 	checktype(layer, 1, "number", 2)
@@ -538,15 +536,8 @@ function RPImage:is_transparent(layer_or_cell, x, y)
 end
 
 
--- Merge layers down from 'top' to 'bottom', optionally using 'transp_func' for
--- transparency checking.
--- If called without layer arguments, it merges all layers.
---
--- Examples:
---     rpimg:merge_layers()
---     rpimg:merge_layers(5, 1)
---     rpimg:merge_layers(5, 1, my_transp_func)
---     rpimg:merge_layers(my_transp_func)
+-- Merge layers down from `top` to `bottom`.
+-- If called without arguments, it merges all layers.
 function RPImage:merge_layers(top, bottom)
 	bottom, top = bottom or 1, top or self._layers
 
@@ -587,8 +578,7 @@ function RPImage:merge_layers(top, bottom)
 end
 
 
--- Set custom cell components to use for transparent cells.
--- If a component is nil, the default one is used.
+-- Set custom cell components to use for transparent cells. If a component is nil, the default one is used.
 -- NOTE: this is a heavy operation, as it converts all the transparent cells
 -- in the entire image.
 function RPImage:set_custom_transp(char, fg, bg)
@@ -638,24 +628,25 @@ function RPImage:reset_transp()
 	end
 end
 
--- insert a new layer at index 'i'
--- TODO: maybe this should throw error when i >= 9
-function RPImage:insert_layer_at(i)
+-- Inserts a new layer at index `index`. Does nothing if image has maximum layers.
+-- TODO: check bounds
+function RPImage:insert_layer_at(index)
 	if self._layers >= 9 then return end
 	local lc, lf, lb = _init_layer(self)
-	insert(self._chars, i, lc)
-	insert(self._fgs, i, lf)
-	insert(self._bgs, i, lb)
+	insert(self._chars, index, lc)
+	insert(self._fgs, index, lf)
+	insert(self._bgs, index, lb)
 	self._layers = self._layers + 1
 end
 
--- remoev layer at index 'i'
-function RPImage:remove_layer_at(i)
+-- Removes layer at index 'index'. Does nothing if there's only one layer.
+-- TODO: check bounds
+function RPImage:remove_layer_at(index)
 	if self._layers < 1 then return end
-	if i < 1 or i > self._layers then return end
-	remove(self._chars, i)
-	remove(self._fgs, i)
-	remove(self._bgs, i)
+	if index < 1 or index > self._layers then return end
+	remove(self._chars, index)
+	remove(self._fgs, index)
+	remove(self._bgs, index)
 	self._layers = self._layers - 1
 end
 
