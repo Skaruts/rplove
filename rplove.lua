@@ -306,7 +306,7 @@ function RPImage.__eq(self, other)
 	for l=1, self._layers do
 		local tchars, tfgs, tbgs = self._chars[l], self._fgs[l], self._bgs[l]
 		local ochars, ofgs, obgs = other._chars[l], other._fgs[l], other._bgs[l]
-		for i=1, self._w*self._h do
+		for i=0, self._w*self._h-1 do
 			if tchars[i] ~= ochars[i]
 			or tfgs[i]   ~= ofgs[i]
 			or tbgs[i]   ~= obgs[i]
