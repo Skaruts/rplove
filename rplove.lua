@@ -1,25 +1,27 @@
 --=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--
--- MIT License
---
--- Copyright (c) 2019 Skaruts
---
--- Permission is hereby granted, free of charge, to any person obtaining a copy
--- of this software and associated documentation files (the "Software"), to deal
--- in the Software without restriction, including without limitation the rights
--- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
--- copies of the Software, and to permit persons to whom the Software is
--- furnished to do so, subject to the following conditions:
---
--- The above copyright notice and this permission notice shall be included in all
--- copies or substantial portions of the Software.
---
--- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
--- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
--- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
--- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
--- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
--- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
--- SOFTWARE.
+--[[	MIT License
+
+Copyright (c) 2019 Skaruts
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+]]
 --=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--
 --[[
 
@@ -90,11 +92,8 @@
 				r, g, b, a    - color components
 
 
-
 	TODO:
 		- check if love is fused and mounted before reading from files save images
-		- rplove.save(filepath)
-		- check arg types
 ]]
 --=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--
 local remove       = table.remove
@@ -112,17 +111,19 @@ local assert       = assert
 
 
 
--- helpers
+--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--
+--    Helper funcs
+--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--
 local function errorf(level, msg, ...)
 	error(fmt(msg, ...), level+1)
 end
 
 -- a global 'NO_TYPE_CHECKING' flag can be set to true, to disable type checking
-local checktype
+local _checktype
 if NO_TYPE_CHECKING then
-	checktype = function(arg) return arg end
+	_checktype = function(arg, _, _, _) return arg end
 else
-	checktype = function(arg, pos, req_type, level)
+	_checktype = function(arg, pos, req_type, level)
 		local tp = type(arg)
 		if tp == req_type then return end
 		if tp == "table" and arg.__type and arg.__type == req_type then return end
@@ -130,12 +131,8 @@ else
 	end
 end
 
-
-
 --=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--
-
--- 		Quick and dirty file handling helper
-
+--    Simple file handling helper
 --=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--
 local function File(filepath, format)
 	local t = {
@@ -180,24 +177,25 @@ end
 -- this allows you to access 'color.r', etc, while keeping the color as a simple array
 local _lookup_idxs = {r=1, g=2, b=3, a=4}
 
-local _COLOR_TYPE = "RPColor"
-local COL_MT = { __type = _COLOR_TYPE }
+local _DEF_COLOR_TYPE = "RPColor"
+local _color_type = _DEF_COLOR_TYPE
+local Color = { __type = _DEF_COLOR_TYPE }
 
-function COL_MT.__index(t, k)
+function Color.__index(t, k)
 	-- TODO: shouldn't this do rawget(t, k) as well, at some point?)
-	return _lookup_idxs[k] and t[_lookup_idxs[k]] or COL_MT[k]
+	return _lookup_idxs[k] and t[_lookup_idxs[k]] or Color[k]
 end
 
-function COL_MT.__newindex(t, k, v)
+function Color.__newindex(t, k, v)
     if not _lookup_idxs[k] then errorf(2, "invalid field or method '%s'", k) end
     t[_lookup_idxs[k]] = v
 end
 
-function COL_MT.__tostring(t)
+function Color.__tostring(t)
 	return fmt("(%s,%s,%s,%s)", t[1], t[2], t[3], t[4])
 end
 
-function COL_MT.__eq(a, b)
+function Color.__eq(a, b)
 	return rawequal(a, b) or a[1] == b[1] and a[2] == b[2] and a[3] == b[3] and a[4] == b[4]
 end
 
@@ -205,7 +203,7 @@ local function _new_color(r, g, b, a)
 	if not g then
 		r, g, b, a = r.r, r.g, r.b, r.a
 	end
-	return setmetatable(g and {r,g,b,a or 1} or {r[1], r[2], r[3], r[4] or 1}, COL_MT)
+	return setmetatable(g and {r,g,b,a or 1} or {r[1], r[2], r[3], r[4] or 1}, Color)
 end
 
 
@@ -352,6 +350,13 @@ local function _new_image(w, h, layers, version)
 	return t
 end
 
+-- clear all layers
+function RPImage:clear()
+	for l=1, self._layers do
+		self:clear_layer(l)
+	end
+end
+
 --fill layer at 'idx' with empty cells
 function RPImage:clear_layer(idx)
 	if idx < 1 or idx > self._layers then return end
@@ -361,13 +366,6 @@ function RPImage:clear_layer(idx)
 		lc[i] = char
 		lf[i] = fg
 		lb[i] = bg
-	end
-end
-
--- clear all layers
-function RPImage:clear()
-	for l=1, self._layers do
-		self:clear_layer(l)
 	end
 end
 
@@ -386,12 +384,11 @@ function RPImage:new_cell(char, fg, bg)
 	return setmetatable( { char or ec[1], fg or ec[2], bg or ec[3] }, RPCell )
 end
 
-
 -- Get an `RPCell` object for the cell at coordinates `x` and `y` and in layer 'layer'.
 function RPImage:get_cell(layer, x, y)
-	checktype(layer, 1, "number", 2)
-	checktype(x, 2, "number", 2)
-	checktype(y, 3, "number", 2)
+	_checktype(layer, 1, "number", 2)
+	_checktype(x, 2, "number", 2)
+	_checktype(y, 3, "number", 2)
 	if not _validate_position(self, layer, x, y) then errorf(2, _ERR_BOUNDS, layer, x, y) end
 	local i = x+y*self._w
 	return self:new_cell(self._chars[layer][i], self._fgs[layer][i], self._bgs[layer][i])
@@ -399,9 +396,9 @@ end
 
 -- Get the unpacked cell components at coordinates `x` and `y` and in layer 'layer'.
 function RPImage:get_cell_unpacked(layer, x, y)
-	checktype(layer, 1, "number", 2)
-	checktype(x, 2, "number", 2)
-	checktype(y, 3, "number", 2)
+	_checktype(layer, 1, "number", 2)
+	_checktype(x, 2, "number", 2)
+	_checktype(y, 3, "number", 2)
 	if not _validate_position(self, layer, x, y) then errorf(2, _ERR_BOUNDS, layer, x, y) end
 	local i = x+y*self._w
 	return self._chars[layer][i], self._fgs[layer][i], self._bgs[layer][i]
@@ -409,18 +406,18 @@ end
 
 -- Get the `char` component of the cell at coordinates `x` and `y` and in layer `layer`.
 function RPImage:get_char(layer, x, y)
-	checktype(layer, 1, "number", 2)
-	checktype(x, 2, "number", 2)
-	checktype(y, 3, "number", 2)
+	_checktype(layer, 1, "number", 2)
+	_checktype(x, 2, "number", 2)
+	_checktype(y, 3, "number", 2)
 	if not _validate_position(self, layer, x, y) then errorf(2, _ERR_BOUNDS, layer, x, y) end
 	return self._chars[layer][x+y*self._w]
 end
 
 -- Get the `fg` component of the cell at coordinates `x` and `y` and in layer `layer`.
 function RPImage:get_fg(layer, x, y)
-	checktype(layer, 1, "number", 2)
-	checktype(x, 2, "number", 2)
-	checktype(y, 3, "number", 2)
+	_checktype(layer, 1, "number", 2)
+	_checktype(x, 2, "number", 2)
+	_checktype(y, 3, "number", 2)
 
 	if not _validate_position(self, layer, x, y) then errorf(2, _ERR_BOUNDS, layer, x, y) end
 	return self._fgs[layer][x+y*self._w]
@@ -428,9 +425,9 @@ end
 
 -- Get the `bg` component of the cell at coordinates `x` and `y` and in layer `layer`.
 function RPImage:get_bg(layer, x, y)
-	checktype(layer, 1, "number", 2)
-	checktype(x, 2, "number", 2)
-	checktype(y, 3, "number", 2)
+	_checktype(layer, 1, "number", 2)
+	_checktype(x, 2, "number", 2)
+	_checktype(y, 3, "number", 2)
 
 	if not _validate_position(self, layer, x, y) then errorf(2, _ERR_BOUNDS, layer, x, y) end
 	return self._bgs[layer][x+y*self._w]
@@ -439,12 +436,12 @@ end
 -- Set the components of the cell at coordinates `x`, `y`, in layer `layer`.
 -- (unneeded components can be passed as nil)
 -- param 'char' : number | RPCell | table as {char, fg, bg}
--- param 'fg'   : _COLOR_TYPE
--- param 'bg'   : _COLOR_TYPE
+-- param 'fg'   : Color
+-- param 'bg'   : Color
 function RPImage:set_cell(layer, x, y, char, fg, bg)
-	checktype(layer, 1, "number", 2)
-	checktype(x, 2, "number", 2)
-	checktype(y, 3, "number", 2)
+	_checktype(layer, 1, "number", 2)
+	_checktype(x, 2, "number", 2)
+	_checktype(y, 3, "number", 2)
 
 	if not _validate_position(self, layer, x, y) then return end
 	local idx = x+y*self._w
@@ -453,16 +450,16 @@ function RPImage:set_cell(layer, x, y, char, fg, bg)
 		char, fg, bg = char[1], char[2], char[3]
 	end
 
-	if char then
-		checktype(char, 4, "number", 2)
+	if char ~= nil then
+		_checktype(char, 4, "number", 2)
 		self._chars[layer][idx] = char
 	end
-	if fg then
-		checktype(fg, 5, _COLOR_TYPE, 2)
+	if fg ~= nil then
+		_checktype(fg, 5, _color_type, 2)
 		self._fgs[layer][idx] = fg
 	end
-	if bg then
-		checktype(bg, 6, _COLOR_TYPE, 2)
+	if bg ~= nil then
+		_checktype(bg, 6, _color_type, 2)
 		self._bgs[layer][idx] = bg
 	end
 end
@@ -470,33 +467,33 @@ end
 -- set the `char` component of the cell at coordinates `x`, `y`, in layer `layer`.
 -- param 'char' : number | RPCell | table as {char, fg, bg}
 function RPImage:set_char(layer, x, y, char)
-	checktype(layer, 1, "number", 2)
-	checktype(x, 2, "number", 2)
-	checktype(y, 3, "number", 2)
+	_checktype(layer, 1, "number", 2)
+	_checktype(x, 2, "number", 2)
+	_checktype(y, 3, "number", 2)
 	if not _validate_position(self, layer, x, y) then return end
-	checktype(char, 4, "number", 2)
+	_checktype(char, 4, "number", 2)
 	self._chars[layer][x+y*self._w] = char
 end
 
 -- set the `fg` component of the cell at coordinates `x`, `y`, in layer `layer`.
--- param 'fg'   : _COLOR_TYPE
+-- param 'fg'   : Color
 function RPImage:set_fg(layer, x, y, fg)
-	checktype(layer, 1, "number", 2)
-	checktype(x, 2, "number", 2)
-	checktype(y, 3, "number", 2)
+	_checktype(layer, 1, "number", 2)
+	_checktype(x, 2, "number", 2)
+	_checktype(y, 3, "number", 2)
 	if not _validate_position(self, layer, x, y) then return end
-	checktype(fg, 4, "table", 2)
+	_checktype(fg, 4, "table", 2)
 	self._fgs[layer][x+y*self._w] = fg
 end
 
 -- set the `bg` component of the cell at coordinates `x`, `y`, in layer `layer`.
--- param 'bg'   : _COLOR_TYPE
+-- param 'bg'   : Color
 function RPImage:set_bg(layer, x, y, bg)
-	checktype(layer, 1, "number", 2)
-	checktype(x, 2, "number", 2)
-	checktype(y, 3, "number", 2)
+	_checktype(layer, 1, "number", 2)
+	_checktype(x, 2, "number", 2)
+	_checktype(y, 3, "number", 2)
 	if not _validate_position(self, layer, x, y) then return end
-	checktype(bg, 4, "table", 2)
+	_checktype(bg, 4, "table", 2)
 	self._bgs[layer][x+y*self._w] = bg
 end
 
@@ -517,13 +514,13 @@ function RPImage:is_transparent(layer_or_cell, x, y)
 
 	if not x then
 		local cell = layer_or_cell
-		checktype(cell, 1, "RPCell", 2)
+		_checktype(cell, 1, "RPCell", 2)
 		char, fg, bg = cell.char, cell.fg, cell.bg
 	else
 		local layer = layer_or_cell
-		checktype(layer, 1, "number", 2)
-		checktype(x, 2, "number", 2)
-		checktype(y, 3, "number", 2)
+		_checktype(layer, 1, "number", 2)
+		_checktype(x, 2, "number", 2)
+		_checktype(y, 3, "number", 2)
 		local idx = x+y*self._w
 		char, fg, bg = self._chars[layer][idx], self._fgs[layer][idx], self._bgs[layer][idx]
 	end
@@ -659,25 +656,33 @@ end
 --=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--=--
 local rplove = {}
 
--- Replace the default color metatable with one defined by the user
--- IMPORTANT: must be called before using anything else in rplove
+--[[
+		Replace the default color metatable with one defined by the user
+
+    IMPORTANT:
+        - must be called before using anything else in rplove
+        - 'func_new_from_floats' must be a constructor that accepts 4 numbers from 0 to 1
+]]
 function rplove.use_custom_color(color_mt, func_new_from_floats)
-	COL_MT = color_mt
-	_COLOR_TYPE = COL_MT.__type
+	Color = color_mt
+	if not Color.__type then Color.__type, _color_type = _DEF_COLOR_TYPE, _DEF_COLOR_TYPE
+	else _color_type = Color.__type
+	end
+
 	_new_color = func_new_from_floats
 
 	_PINK   = _new_color(1, 0, 1, 1)
 	_TRANSP = _new_color(0, 0, 0, 0)
 	_BLACK  = _new_color(0, 0, 0, 1)
 
-	_REX_EMPTY_CELL = {32, _BLACK, _PINK}
+	_REX_EMPTY_CELL    = {32, _BLACK, _PINK}
 	_CUSTOM_EMPTY_CELL = {0, _TRANSP, _TRANSP}
 end
 
 -- Create a new RPImage object
--- param 'w'      : number
--- param 'h'      : number
--- param 'layers' : number
+-- 'w'      : number
+-- 'h'      : number
+-- 'layers' : number  (the intended amount of layers)
 function rplove.new_image(w, h, layers)
 	return _new_image(w, h, layers, __VERSION)
 end
@@ -729,9 +734,6 @@ function rplove.load(filepath)
 
 	return img
 end
-
--- TODO: function RPLove.save(filepath) end
-
 
 
 return rplove
